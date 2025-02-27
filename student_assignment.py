@@ -118,11 +118,11 @@ if __name__ == "__main__":
     # collection = demo(question)
     # print("Collection successfully created/retrieved:", collection.name)
 
-    # collection_hw01 = generate_hw01()
-    # if collection_hw01:
-    #     print("generate_hw01() executed successfully. Collection:", collection_hw01.name)
-    # else:
-    #     print("generate_hw01() failed.")
+    collection_hw01 = generate_hw01()
+    if collection_hw01:
+        print("generate_hw01() executed successfully. Collection:", collection_hw01.name)
+    else:
+        print("generate_hw01() failed.")
 
     question = "我想要找有關茶餐點的店家"
     city = ["宜蘭縣", "新北市"]
