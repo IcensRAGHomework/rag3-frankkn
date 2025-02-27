@@ -15,7 +15,6 @@ dbpath = "./"
 csv_file = "COA_OpenData.csv"
 
 def generate_hw01():
-    
     # 初始化 ChromaDB
     chroma_client = chromadb.PersistentClient(path=dbpath)
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
@@ -46,7 +45,7 @@ def generate_hw01():
                 "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
             }
             
-            document = row["HostWords"]
+            document = row.get("HostWords", "")
             document_id = str(row["ID"])  
             collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
 
@@ -80,9 +79,6 @@ def generate_hw02(question, city, store_type, start_date, end_date):
         reverse=True
     )
 
-    sorted_names = [metadata['name'] for metadata, _ in sorted_results]
-    # print(sorted_names)
-
     filtered_results = [metadata['name'] for metadata, distance in sorted_results if (1 - distance) >= 0.8]
 
     return filtered_results
@@ -114,11 +110,11 @@ if __name__ == "__main__":
 
     generate_hw01()
 
-    # question = "我想要找有關茶餐點的店家"
-    # city = ["宜蘭縣", "新北市"]
-    # store_type = ["美食"]
-    # start_date = datetime.datetime(2024, 4, 1)
-    # end_date = datetime.datetime(2024, 5, 1)
+    question = "我想要找有關茶餐點的店家"
+    city = ["宜蘭縣", "新北市"]
+    store_type = ["美食"]
+    start_date = datetime.datetime(2024, 4, 1)
+    end_date = datetime.datetime(2024, 5, 1)
     
-    # ans_list = generate_hw02(question, city, store_type, start_date, end_date)
+    ans_list = generate_hw02(question, city, store_type, start_date, end_date)
     # print(ans_list)
