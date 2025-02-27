@@ -15,104 +15,81 @@ dbpath = "./"
 
 def generate_hw01():
     csv_file = "COA_OpenData.csv"
-    try:
-        # 讀取 CSV 檔案
-        df = pd.read_csv(csv_file)
-        
-        # 初始化 ChromaDB 客戶端
-        chroma_client = chromadb.PersistentClient(path=dbpath)
-        openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=gpt_emb_config['api_key'],
-            api_base=gpt_emb_config['api_base'],
-            api_type=gpt_emb_config['openai_type'],
-            api_version=gpt_emb_config['api_version'],
-            deployment_id=gpt_emb_config['deployment_name']
-        )
-        
-        # 建立或獲取 Collection
-        collection = chroma_client.get_or_create_collection(
-            name="TRAVEL", # 這是此 Collection 的名稱，用於標識此數據集的用途。
-            metadata={"hnsw:space": "cosine"}, # 這是設定查詢相似度計算的參數，cosine 表示使用餘弦相似度來進行距離計算。
-            embedding_function=openai_ef
-        )
-        
-        # 在初始化資料庫時，需從 CSV 檔案中提取每條記錄的相關欄位，並將其作為 Metadata 存入 ChromaDB
-        # 插入資料到 Collection
-        for _, row in df.iterrows():
-            metadata = {
-                "file_name": csv_file,
-                "name": row["Name"],
-                "type": row["Type"],
-                "address": row["Address"],
-                "tel": row["Tel"],
-                "city": row["City"],
-                "town": row["Town"],
-                "date": int(time.mktime(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timetuple()))
-            }
-            
-            # 文件數據（documents） 將 CSV 檔案中的 HostWords 欄位內容提取作為文本數據存入 ChromaDB
-            # 這些數據是查詢時進行相似度計算的核心。
-            document = row.get("HostWords", "")
-            document_id = str(row["ID"])  
-            collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
-        
-        return collection
+
+    # 讀取 CSV 檔案
+    df = pd.read_csv(csv_file)
     
-    except Exception as e:
-        print("Error in generate_hw01:", e)
-        print(traceback.format_exc())
-        return None
+    # 初始化 ChromaDB
+    chroma_client = chromadb.PersistentClient(path=dbpath)
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
+    )
+    
+    # 建立或獲取 Collection
+    collection = chroma_client.get_or_create_collection(
+        name="TRAVEL", # 這是此 Collection 的名稱，用於標識此數據集的用途。
+        metadata={"hnsw:space": "cosine"}, # 這是設定查詢相似度計算的參數，cosine 表示使用餘弦相似度來進行距離計算。
+        embedding_function=openai_ef
+    )
+    
+    # 在初始化資料庫時，需從 CSV 檔案中提取每條記錄的相關欄位，並將其作為 Metadata 存入 ChromaDB
+    # 插入資料到 Collection
+    for _, row in df.iterrows():
+        metadata = {
+            "file_name": csv_file,
+            "name": row["Name"],
+            "type": row["Type"],
+            "address": row["Address"],
+            "tel": row["Tel"],
+            "city": row["City"],
+            "town": row["Town"],
+            "date": int(time.mktime(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timetuple()))
+        }
+        
+        # 文件數據（documents） 將 CSV 檔案中的 HostWords 欄位內容提取作為文本數據存入 ChromaDB
+        # HostWords是查詢時進行相似度計算的核心。
+        document = row.get("HostWords", "") # 如果HostWords是null，則設為"" (空字串)
+        document_id = str(row["ID"])  
+        collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
+    
+    return collection
     
 def generate_hw02(question, city, store_type, start_date, end_date):
-    try:
-        # 初始化 ChromaDB 客戶端
-        chroma_client = chromadb.PersistentClient(path=dbpath)
-        openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=gpt_emb_config['api_key'],
-            api_base=gpt_emb_config['api_base'],
-            api_type=gpt_emb_config['openai_type'],
-            api_version=gpt_emb_config['api_version'],
-            deployment_id=gpt_emb_config['deployment_name']
-        )
+    # 取得 collection
+    collection = generate_hw01()
 
-        # 取得 collection
-        collection = chroma_client.get_or_create_collection(
-            name="TRAVEL",
-            metadata={"hnsw:space": "cosine"},
-            embedding_function=openai_ef
-        )
+    # 進行相似度查詢
+    query_results = collection.query(
+        query_texts=[question],
+        n_results=10, 
+        where={
+            "$and": [
+                {"date": {"$gte": int(start_date.timestamp())}},
+                {"date": {"$lte": int(end_date.timestamp())}},
+                {"type": {"$in": store_type}},
+                {"city": {"$in": city}}
+            ]
+        }
+    )
+    # print(query_results)
 
-        # 進行相似度查詢
-        query_results = collection.query(
-            query_texts=[question],
-            n_results=10
-        )
+    metadatas = query_results['metadatas'][0]
+    distances = query_results['distances'][0]
 
-        results = []
-        for i in range(len(query_results["ids"][0])):
-            metadata = query_results["metadatas"][0][i]
-            score = query_results["distances"][0][i]  # ChromaDB 回傳的是距離，需轉換為相似度
-            similarity = 1 - score
+    sorted_results = sorted(
+        zip(metadatas, distances),
+        key=lambda x: 1 - x[1],  # similarity = 1 - distance
+        reverse=True
+    )
 
-            # 依條件過濾
-            if similarity >= 0.80:
-                if city and metadata["city"] not in city:
-                    continue
-                if store_type and metadata["type"] not in store_type:
-                    continue
-                entry_date = datetime.datetime.fromtimestamp(metadata["date"])
-                if not (start_date <= entry_date <= end_date):
-                    continue
-                
-                results.append((metadata["name"], similarity))
-        
-        # 根據相似度排序並回傳店家名稱列表
-        results.sort(key=lambda x: x[1], reverse=True)
-        return [name for name, _ in results]
-    
-    except Exception as e:
-        print("Error in generate_hw02:", e)
-        return []
+    sorted_names = [metadata['name'] for metadata, _ in sorted_results]
+    # print(sorted_names) 
+
+    return sorted_names
     
 def generate_hw03(question, store_name, new_store_name, city, store_type):
     pass
@@ -152,4 +129,4 @@ if __name__ == "__main__":
     end_date = datetime.datetime(2024, 5, 1)
     
     ans_list = generate_hw02(question, city, store_type, start_date, end_date)
-    print(ans_list)
+    # print(ans_list)
