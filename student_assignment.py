@@ -15,7 +15,6 @@ dbpath = "./"
 csv_file = "COA_OpenData.csv"
 
 def generate_hw01():
-    # 初始化 ChromaDB
     chroma_client = chromadb.PersistentClient(path=dbpath)
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
         api_key=gpt_emb_config['api_key'],
@@ -25,7 +24,6 @@ def generate_hw01():
         deployment_id=gpt_emb_config['deployment_name']
     )
     
-    # 建立或獲取 Collection
     collection = chroma_client.get_or_create_collection(
         name="TRAVEL",
         metadata={"hnsw:space": "cosine"},
@@ -52,10 +50,8 @@ def generate_hw01():
     return collection
     
 def generate_hw02(question, city, store_type, start_date, end_date):
-    # 取得 collection
     collection = generate_hw01()
 
-    # 進行相似度查詢
     query_results = collection.query(
         query_texts=[question],
         n_results=10, 
