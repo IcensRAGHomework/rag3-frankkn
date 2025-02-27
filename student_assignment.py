@@ -35,22 +35,22 @@ def generate_hw01():
         metadata={"hnsw:space": "cosine"},
         embedding_function=openai_ef
     )
-    
-    for _, row in df.iterrows():
-        metadata = {
-            "file_name": csv_file,
-            "name": row["Name"],
-            "type": row["Type"],
-            "address": row["Address"],
-            "tel": row["Tel"],
-            "city": row["City"],
-            "town": row["Town"],
-            "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
-        }
-        
-        document = row["HostWords"]
-        document_id = str(row["ID"])  
-        collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
+    if collection.count() == 0: 
+        for _, row in df.iterrows():
+            metadata = {
+                "file_name": csv_file,
+                "name": row["Name"],
+                "type": row["Type"],
+                "address": row["Address"],
+                "tel": row["Tel"],
+                "city": row["City"],
+                "town": row["Town"],
+                "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
+            }
+            
+            document = row["HostWords"]
+            document_id = str(row["ID"])  
+            collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
 
     return collection
     
@@ -114,11 +114,7 @@ if __name__ == "__main__":
     # collection = demo(question)
     # print("Collection successfully created/retrieved:", collection.name)
 
-    collection_hw01 = generate_hw01()
-    if collection_hw01:
-        print("generate_hw01() executed successfully. Collection:", collection_hw01.name)
-    else:
-        print("generate_hw01() failed.")
+    generate_hw01()
 
     # question = "我想要找有關茶餐點的店家"
     # city = ["宜蘭縣", "新北市"]
