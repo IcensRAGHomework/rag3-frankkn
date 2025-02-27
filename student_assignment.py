@@ -48,9 +48,9 @@ def generate_hw01():
             "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
         }
         
-        document = row.get("HostWords", "") # 如果HostWords是null，設為""
+        document = row["HostWords"]
         document_id = str(row["ID"])  
-        collection.add(ids=document_id, documents=[document], metadatas=[metadata])
+        collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
 
     return collection
     
