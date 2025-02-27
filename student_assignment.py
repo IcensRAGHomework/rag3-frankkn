@@ -47,7 +47,7 @@ def generate_hw01():
             "tel": row["Tel"],
             "city": row["City"],
             "town": row["Town"],
-            "date": int(time.mktime(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp()))
+            "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
         }
         
         # 文件數據（documents） 將 CSV 檔案中的 HostWords 欄位內容提取作為文本數據存入 ChromaDB
