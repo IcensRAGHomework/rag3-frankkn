@@ -15,26 +15,26 @@ dbpath = "./"
 csv_file = "COA_OpenData.csv"
 
 def generate_hw01():
+    
+    # 初始化 ChromaDB
+    chroma_client = chromadb.PersistentClient(path=dbpath)
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-        api_key = gpt_emb_config['api_key'],
-        api_base = gpt_emb_config['api_base'],
-        api_type = gpt_emb_config['openai_type'],
-        api_version = gpt_emb_config['api_version'],
-        deployment_id = gpt_emb_config['deployment_name']
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
     )
-
-    chroma_client = chromadb.PersistentClient(path = dbpath)
-
+    
+    # 建立或獲取 Collection
     collection = chroma_client.get_or_create_collection(
-        name = "TRAVEL",
-        metadata = {"hnsw:space": "cosine"},
-        embedding_function = openai_ef
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
     )
-
     if collection.count() == 0:
-        data = pandas.read_csv(csv_file)
-        for index, row in data.iterrows():
-            id = str(row["ID"])
+        df = pd.read_csv(csv_file)
+        for _, row in df.iterrows():
             metadata = {
                 "file_name": csv_file,
                 "name": row["Name"],
@@ -43,11 +43,12 @@ def generate_hw01():
                 "tel": row["Tel"],
                 "city": row["City"],
                 "town": row["Town"],
-                "date": int(datetime.datetime.strptime(row["CreateDate"], '%Y-%m-%d').timestamp())
+                "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
             }
+            
             document = row["HostWords"]
-
-            collection.add(ids = id, metadatas = metadata, documents = document)
+            document_id = str(row["ID"])  
+            collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
 
     return collection
     
