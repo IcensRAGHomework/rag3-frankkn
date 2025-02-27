@@ -87,9 +87,11 @@ def generate_hw02(question, city, store_type, start_date, end_date):
     )
 
     sorted_names = [metadata['name'] for metadata, _ in sorted_results]
-    # print(sorted_names) 
+    # print(sorted_names)
 
-    return sorted_names
+    filtered_results = [metadata['name'] for metadata, distance in sorted_results if (1 - distance) >= 0.8]
+
+    return filtered_results
     
 def generate_hw03(question, store_name, new_store_name, city, store_type):
     pass
