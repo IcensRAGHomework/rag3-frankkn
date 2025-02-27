@@ -50,7 +50,7 @@ def generate_hw01():
         
         document = row["HostWords"]
         document_id = str(row["ID"])  
-        collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
+        collection.add(ids=document_id, documents=document, metadatas=metadata)
 
     return collection
     
