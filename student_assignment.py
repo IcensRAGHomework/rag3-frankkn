@@ -13,46 +13,44 @@ gpt_emb_config = get_model_configuration(gpt_emb_version)
 
 dbpath = "./"
 
-csv_file = 'COA_OpenData.csv'
 def generate_hw01():
-    # Create embedding function
+    csv_file = "COA_OpenData.csv"
+
+    # 讀取 CSV 檔案
+    df = pd.read_csv(csv_file)
+    
+    # 初始化 ChromaDB
+    chroma_client = chromadb.PersistentClient(path=dbpath)
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-        api_key = gpt_emb_config['api_key'],
-        api_base = gpt_emb_config['api_base'],
-        api_type = gpt_emb_config['openai_type'],
-        api_version = gpt_emb_config['api_version'],
-        deployment_id = gpt_emb_config['deployment_name']
+        api_key=gpt_emb_config['api_key'],
+        api_base=gpt_emb_config['api_base'],
+        api_type=gpt_emb_config['openai_type'],
+        api_version=gpt_emb_config['api_version'],
+        deployment_id=gpt_emb_config['deployment_name']
     )
-
-    # Create chromadb
-    chroma_client = chromadb.PersistentClient(path = dbpath)
-
-    # Create new collection to store or retrieve data
+    
+    # 建立或獲取 Collection
     collection = chroma_client.get_or_create_collection(
-        name = "TRAVEL",
-        metadata = {"hnsw:space": "cosine"},
-        embedding_function = openai_ef
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
     )
-
-    if collection.count() == 0:
-        # Read data from csv file
-        data = pd.read_csv(csv_file)
-        for index, row in data.iterrows():
-            id = str(row["ID"])
-            metadata = {
-                "file_name": csv_file,
-                "name": row["Name"],
-                "type": row["Type"],
-                "address": row["Address"],
-                "tel": row["Tel"],
-                "city": row["City"],
-                "town": row["Town"],
-                "date": int(datetime.datetime.strptime(row["CreateDate"], '%Y-%m-%d').timestamp())
-            }
-            document = row["HostWords"]
-
-            # Add metadata and document to the collection
-            collection.add(ids = id, metadatas = metadata, documents = document)
+    
+    for _, row in df.iterrows():
+        metadata = {
+            "file_name": csv_file,
+            "name": row["Name"],
+            "type": row["Type"],
+            "address": row["Address"],
+            "tel": row["Tel"],
+            "city": row["City"],
+            "town": row["Town"],
+            "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
+        }
+        
+        document = row.get("HostWords", "") # 如果HostWords是null，設為""
+        document_id = str(row["ID"])  
+        collection.add(ids=document_id, documents=[document], metadatas=[metadata])
 
     return collection
     
