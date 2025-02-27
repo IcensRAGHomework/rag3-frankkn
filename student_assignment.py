@@ -13,48 +13,46 @@ gpt_emb_config = get_model_configuration(gpt_emb_version)
 
 dbpath = "./"
 
+csv_file = 'COA_OpenData.csv'
 def generate_hw01():
-    csv_file = "COA_OpenData.csv"
-
-    # 讀取 CSV 檔案
-    df = pd.read_csv(csv_file)
-    
-    # 初始化 ChromaDB
-    chroma_client = chromadb.PersistentClient(path=dbpath)
+    # Create embedding function
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-        api_key=gpt_emb_config['api_key'],
-        api_base=gpt_emb_config['api_base'],
-        api_type=gpt_emb_config['openai_type'],
-        api_version=gpt_emb_config['api_version'],
-        deployment_id=gpt_emb_config['deployment_name']
+        api_key = gpt_emb_config['api_key'],
+        api_base = gpt_emb_config['api_base'],
+        api_type = gpt_emb_config['openai_type'],
+        api_version = gpt_emb_config['api_version'],
+        deployment_id = gpt_emb_config['deployment_name']
     )
-    
-    # 建立或獲取 Collection
+
+    # Create chromadb
+    chroma_client = chromadb.PersistentClient(path = dbpath)
+
+    # Create new collection to store or retrieve data
     collection = chroma_client.get_or_create_collection(
-        name="TRAVEL", # 這是此 Collection 的名稱，用於標識此數據集的用途。
-        metadata={"hnsw:space": "cosine"}, # 這是設定查詢相似度計算的參數，cosine 表示使用餘弦相似度來進行距離計算。
-        embedding_function=openai_ef
+        name = "TRAVEL",
+        metadata = {"hnsw:space": "cosine"},
+        embedding_function = openai_ef
     )
-    
-    # 在初始化資料庫時，需從 CSV 檔案中提取每條記錄的相關欄位，並將其作為 Metadata 存入 ChromaDB
-    # 插入資料到 Collection
-    for _, row in df.iterrows():
-        metadata = {
-            "file_name": csv_file,
-            "name": row["Name"],
-            "type": row["Type"],
-            "address": row["Address"],
-            "tel": row["Tel"],
-            "city": row["City"],
-            "town": row["Town"],
-            "date": int(datetime.datetime.strptime(row["CreateDate"], "%Y-%m-%d").timestamp())
-        }
-        
-        # 文件數據（documents） 將 CSV 檔案中的 HostWords 欄位內容提取作為文本數據存入 ChromaDB
-        # HostWords是查詢時進行相似度計算的核心。
-        document = row.get("HostWords", "") # 如果HostWords是null，則設為"" (空字串)
-        document_id = str(row["ID"])  
-        collection.add(ids=[document_id], documents=[document], metadatas=[metadata])
+
+    if collection.count() == 0:
+        # Read data from csv file
+        data = pd.read_csv(csv_file)
+        for index, row in data.iterrows():
+            id = str(row["ID"])
+            metadata = {
+                "file_name": csv_file,
+                "name": row["Name"],
+                "type": row["Type"],
+                "address": row["Address"],
+                "tel": row["Tel"],
+                "city": row["City"],
+                "town": row["Town"],
+                "date": int(datetime.datetime.strptime(row["CreateDate"], '%Y-%m-%d').timestamp())
+            }
+            document = row["HostWords"]
+
+            # Add metadata and document to the collection
+            collection.add(ids = id, metadatas = metadata, documents = document)
 
     return collection
     
