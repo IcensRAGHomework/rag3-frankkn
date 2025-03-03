@@ -93,9 +93,7 @@ def generate_hw03(question, store_name, new_store_name, city, store_type):
         # 更新 Metadata，加入 new_store_name
         metadata["new_store_name"] = new_store_name
         
-        # 刪除舊的，再新增更新後的
-        collection.delete(ids=[doc_id])
-        collection.add(ids=[doc_id], documents=[store_results["documents"][0][0]], metadatas=[metadata])
+        collection.upsert(ids=[doc_id], documents=[store_results["documents"][0][0]], metadatas=[metadata])
     
     # 2. 查詢符合條件的店家
     query_results = collection.query(
